@@ -67,7 +67,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapLongClickListener(this);
         Intent intent = getIntent();
         String info = intent.getStringExtra("info");
-
+        //MainActivity classından gelen info "new" değerini taşıyorsa yapılacak işlemler
         if(info.matches("new")){
 
             //Konum alma servisini çağırıyoruz
@@ -91,7 +91,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 }
             };
-
+            //Eğer konum alma servisinze izin verilmezse kullanıcının bilinen son konumu üzerinden işlem yapılır
             if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
 
                 ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION},1);
@@ -105,7 +105,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         } else{
-            //sqlite data && intent data
+            //Eğer Main'den gelen info "old" değerini taşıyorsa map temizlenir
+            //Main'den gelen place nesnesinin taşıdığı değerler aktarılır
+            //Gelen bilgiler dahilinde map üzerinde yeni marker oluşturulur, tıklanınca adres gözükür ve map o bölgeye zoom yapar
             mMap.clear();
             Place place =(Place) intent.getSerializableExtra("place");
             LatLng latLng = new LatLng(place.latitude,place.longitude);
@@ -151,13 +153,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
     }
-
+    //Map üzerinde basılı tutulunca ne olur
     @Override
     public void onMapLongClick(LatLng latLng) {
-        //Basılı tutulduğunda konum ekleme
+        
         Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
         String address = "";
-
+        //Basılı tutulduğunda adres konumunu addressList listesinin içine yazdırıyoruz
+        //address değişkenine gerçek adresi yazdırıyoruz
         try {
             List<Address> addressList = geocoder.getFromLocation(latLng.latitude,latLng.longitude,1);
             if(addressList != null && addressList.size()>0){
@@ -177,34 +180,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        //Mapi temizleyip tıklanılan bölgede yeni marker oluşturuyoruz 
         mMap.clear();
         mMap.addMarker(new MarkerOptions().title(address).position(latLng));
-
+        //enlem ve boylam bilgisini double cinsinden çekiyoruz
         Double latitude = latLng.latitude;
         Double longitude = latLng.longitude;
-
+        //Database'e kaydetmek için Place sınıfından yeni bir nesne oluşturuyoruz
         final Place place = new Place(address,latitude,longitude);
 
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(MapsActivity.this);
         alertDialog.setCancelable(false);
+        //Yanlışlıkla tıklamalara önlem olarak Alert veriyoruz
         alertDialog.setTitle("Are You Sure?");
         alertDialog.setMessage(place.name);
+        //Evete tıklanırsa
         alertDialog.setPositiveButton("yes", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                //Database işlemleri için try catch yapısını kuruyoruz
                 try {
+                    //Places tablosu yoksa oluşturuyoruz varsa açıyoruz
                     database = MapsActivity.this.openOrCreateDatabase("Places", MODE_PRIVATE, null);
                     database.execSQL("CREATE TABLE IF NOT EXISTS places (id INTEGER PRIMARY KEY,name VARCHAR,latitude VARCHAR,longitude VARCHAR)");
-
+                    
                     String toCompile = "INSERT INTO places (name,latitude,longitude) VALUES(?,?,?)";
-
+                    //Oluşturduğumuz sınıf sayesinde kolayca verilerimizi Database'e yazdırıyoruz
                     SQLiteStatement sqLiteStatement = database.compileStatement(toCompile);
                     sqLiteStatement.bindString(1,place.name);
                     sqLiteStatement.bindString(2,String.valueOf(place.latitude));
                     sqLiteStatement.bindString(3,String.valueOf(place.longitude));
                     sqLiteStatement.execute();
-
+                    //Saved toast mesajı yazdırıyoruz
                     Toast.makeText(getApplicationContext(),"Saved!",Toast.LENGTH_LONG).show();
 
 
@@ -215,12 +222,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
+        //Hayıra basılırsa 
         alertDialog.setNegativeButton("no", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                //Canceled toast mesajını yazdırıyoruz
                 Toast.makeText(getApplicationContext(),"Canceled!",Toast.LENGTH_LONG).show();
             }
         });
+        //Verilen cevaba göre Toast'u ekranda gösteriyoruz
         alertDialog.show();
 
     }
