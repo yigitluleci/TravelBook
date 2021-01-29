@@ -16,7 +16,7 @@ import com.yigitluleci.travelbook.model.Place;
 import java.util.ArrayList;
 
 public class CustomAdapter extends ArrayAdapter<Place> {
-
+    //Veritabanından gelen bilgileri ListView'da göstermek için CustomAdapter oluşturuyoruz.
     ArrayList<Place> placeList;
     Context context;
 
